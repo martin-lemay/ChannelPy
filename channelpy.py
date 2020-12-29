@@ -78,8 +78,8 @@ class Bend:
 
         # find the apex of the bend and compute bend geometric properties (self.params)
         self.side = False
-        self.cl_pt_max_curv = self.find_apex(nb, sinuo_thres)
-        self.cl_pt_max_curv # may be changed later if several consecutive centerlines
+        self.find_apex(nb, sinuo_thres)
+        self.cl_pt_max_curv = self.cl_pt_apex
 
         # compute the amplitudes
         self.params["Amplitude_perp"] = self.compute_amplitude(self.cl_pt_apex.pt, kind="perpendicular")
@@ -97,18 +97,7 @@ class Bend:
         new_bend = Bend(self.id, self.cl_points + bend.cl_points, 
                        self.cl_pt_inflex_up, bend.cl_pt_inflex_down, 
                        self.age, nb=nb, sinuo_thres=sinuo_thres)
-        return new_bend
-    
-    
-    def bends(self, bend_id):
-        i = 0
-        ret = False
-        while not i and i < len(bends):
-            if bends[i] == bend_id:
-                ret = i
-            i += 1            
-        return ret
-        
+        return new_bend       
         
     # apex = maximal curvature among the nb farest points (euclidienne distance) from the middle of the segment between inflexion points (or perpendicular to this segment for low amplitude meander (< 0.5*d_inflex))
     # if nb = 1, take the point at maximal amplitude
@@ -303,31 +292,12 @@ class Centerline:
         dataset["Curv_abscissa"] = ls
 
     def compute_curvature(self, dataset, window):
-
-        lcurv = np.zeros(len(dataset["Cart_abscissa"]))
         for i, row in dataset.iterrows():
-
-            if i > 0 and i < len(lcurv)-1:
-
-                x1, y1 = dataset["Cart_abscissa"][i-1], dataset["Cart_ordinate"][i-1]
-                x2, y2 = row["Cart_abscissa"], row["Cart_ordinate"]
-                x3, y3 = dataset["Cart_abscissa"][i+1], dataset["Cart_ordinate"][i+1]
-
-                pt1 = (x1, y1)
-                pt2 = (x2, y2)
-                pt3 = (x3, y3)
-
-                ds12 = distance(pt1, pt2)
-                ds23 = distance(pt2, pt3)
-                ds13 = ds12 + ds23
-
-                dxds = (x3 - x1) / (ds13)
-                dyds = (y3 - y1) / (ds13)
-
-                d2xds2 = 2 * ( ds12*(x3-x2) - ds23*(x2-x1) ) / (ds12*ds23*ds13)
-                d2yds2 = 2 * ( ds12*(y3-y2) - ds23*(y2-y1) ) / (ds12*ds23*ds13)
-
-                dataset["Curvature"][i] = -(dxds*d2yds2 - dyds*d2xds2) / pow( pow(dxds, 2) + pow(dyds, 2) , 3./2.)
+            if i > 0 and i < len(dataset["Cart_abscissa"])-1:
+                pt1 = (dataset["Cart_abscissa"][i-1], dataset["Cart_ordinate"][i-1])
+                pt2 = (row["Cart_abscissa"], row["Cart_ordinate"])
+                pt3 = (dataset["Cart_abscissa"][i+1], dataset["Cart_ordinate"][i+1])
+                dataset["Curvature"][i] = compute_curvature(pt1, pt2, pt3)
 
         # smooth curvature using the Savitzky-Golay filter
         if window % 2==0:
