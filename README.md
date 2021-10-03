@@ -1,5 +1,5 @@
 # ChannelPy
-This repository set the data structure to store channel centerline properties, and provides methods to measure geomorphic parameters.
+This repository sets the data structure to store channel centerline properties, and provides methods to measure geomorphic parameters.
 
 ## 
 The methodology for channel measurements is inspired from [zsylvester/meanderpy](https://github.com/zsylvester/meanderpy)
