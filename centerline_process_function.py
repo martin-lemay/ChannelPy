@@ -39,6 +39,38 @@ def import_data(filepath, filter_raw = 1, start = -999999, end = 999999):
     fin.close()
     return dataset, header
 
+# create the dataset as Flumy csv file
+def create_dataset_from_xy(X, Y):
+    data = np.zeros((X.size, 5))
+    s = 0
+    x_prev, y_prev = 0, 0
+    for i, x in enumerate(X):
+        y = Y[i]
+        data[i, 1] = x
+        data[i, 2] = y
+        if i == 0:
+            data[i, 0] = 0 # curvilinear abscissa
+        else:
+            # curvilinear abscissa
+            s += distance((x, y), (x_prev, y_prev))
+            data[i, 0] = s
+
+            # curvature commputation
+            if i == 0 or i == X.size-1:
+                data[i, 4] = 0 # curvature
+            else:
+                i_min = max(i-1, 0)
+                i_max = min(i+1, X.size-1)
+                pt1 = (X[i_min], Y[i_min])
+                pt3 = (X[i_max], Y[i_max])
+
+                pt2 = (x, y)
+                data[i, 4] = compute_curvature(pt1, pt2, pt3)
+        x_prev, y_prev = x, y
+
+    dataset = pd.DataFrame(data, columns=("Curv_abscissa", "Cart_abscissa", "Cart_ordinate",
+                                                  "Elevation", "Curvature"))
+    return dataset
 
 def filter_dataset(filepath, keys, raw=0, start=-999999, end=999999):
 
