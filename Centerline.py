@@ -46,15 +46,14 @@ class Centerline:
 
     def __init__(self, age, dataset, spacing, smooth_distance, lag=1, nb=1, sinuo_thres=1.05,
                  apex_proba_ponds=(1.,1.,1.),
-                 compute_curvature=True, interpol_props=True, plot_curvature=False,
-                 compute_geometry=False):
+                 compute_curvature=True, interpol_props=True, plot_curvature=False):
 
         self.age = age
         self.cl_points = []
         self.nb_points = 0
 
         self.init_centerline(dataset, age, spacing, smooth_distance, compute_curvature, interpol_props,
-                             plot_curvature=plot_curvature, compute_geometry=compute_geometry)
+                             plot_curvature=plot_curvature)
         self.bends = []
         self.find_bends(lag, nb, sinuo_thres, apex_proba_ponds)
         self.nb_bends = len(self.bends)
@@ -63,9 +62,6 @@ class Centerline:
         self.index_cl_pts_prev_centerline = False
         self.index_cl_pts_next_centerline = False
 
-        if compute_geometry:
-            self.compute_geometry_leopold()
-            print("Geometry computed")
 
     def get_property(self, prop_name):
       try:
@@ -78,13 +74,13 @@ class Centerline:
         return []
 
     def init_centerline(self, dataset, age, spacing, smooth_distance, compute_curvature=True,
-                        interpol_props=False, plot_curvature=False, compute_geometry=True):
+                        interpol_props=False, plot_curvature=False):
 
         # 1. resample the centerline with a parametric spline function
         nb_pts = int(self.compute_total_curvilinear_length(dataset["Cart_abscissa"], dataset["Cart_ordinate"]) / spacing +1)
         new_points = self.resample_centerline(dataset["Cart_abscissa"], dataset["Cart_ordinate"], nb_pts)
-
-        columns = dataset.columns.to_list() + ["Normal_x", "Normal_y"]
+        
+        columns = dataset.columns.tolist() + ["Normal_x", "Normal_y"]
         dataset_new = pd.DataFrame(np.zeros((len(new_points[0]), len(columns))),
                                    columns=columns)
 
@@ -273,14 +269,17 @@ class Centerline:
                 d1 = 0.5
                 d2 = 0.5
                 denom = 1.
+            
             for prop in props:
                 if prop in ("Curv_abscissa", "Cart_abscissa", "Cart_ordinate"):
                     continue
 
-
-                dataset_new.loc[i, prop] = (d1 * dataset[prop][j1] +
-                                            d2 * dataset[prop][j1+j2]) / denom
-
+                if (j1+j2 < dataset[prop].size):
+                    dataset_new.loc[i, prop] = (d1 * dataset[prop][j1] +
+                                                d2 * dataset[prop][j1+j2]) / denom
+                else:
+                    dataset_new.loc[i, prop] = dataset[prop][j1]
+                    
                 if (self.age == 1000) & (prop == "Elevation"):
                   print(dataset[prop][j1])
                   print(dataset[prop][j1+j2])
@@ -525,15 +524,18 @@ class Centerline:
         bend = False
         for i, next_bend in enumerate(self.bends):
             if i > 1:
-                bend.params["Wavelength_Leopold"] = cpf.distance(prev_bend.pt_apex.pt, next_bend.pt_apex.pt)
-                pt_proj = cpf.project_perpendicularly(bend.pt_apex.pt, prev_bend.pt_apex.pt, next_bend.pt_apex.pt)
-                bend.params["Amplitude_Leopold"] = cpf.distance(bend.pt_apex.pt, pt_proj)
+                pt_apex_prev = self.cl_points[prev_bend.index_apex]
+                pt_apex = self.cl_points[bend.index_apex]
+                pt_apex_next = self.cl_points[next_bend.index_apex]
+                bend.params["Wavelength_Leopold"] = cpf.distance(pt_apex.pt, pt_apex_next.pt)
+                pt_proj = cpf.project_perpendicularly(pt_apex.pt, pt_apex_prev.pt, pt_apex_next.pt)
+                bend.params["Amplitude_Leopold"] = cpf.distance(pt_apex.pt, pt_proj)
 
             prev_bend = bend
             bend = next_bend
 
 
-    def morphometry(self, window_size, window_nb):
+    def morphometry(self, window_size, leopold=True):
 
         props = ("Sinuosity", "Length", "Half_Wavelength",
                  "Amplitude_perp", "Amplitude_middle",
@@ -544,7 +546,11 @@ class Centerline:
         # compute individual bend geometry
         for i, bend in enumerate(self.bends):
             self.bend_morphometry(i)
-
+        
+        # compute individual bend gemetry according to leopold methology 
+        if leopold:
+            self.compute_geometry_leopold()
+        
         # compute average bend geometry over window and mean values over the centerline
         for i, bend in enumerate(self.bends):
             bend.params_averaged = pd.Series(np.zeros(len(props)), index=props)
@@ -562,23 +568,23 @@ class Centerline:
             while (cl_ptmax.s < smax and jmax < len(self.bends)-1):
                 jmax += 1
                 cl_ptmax = self.cl_points[self.bends[jmax].index_inflex_down]
-
-            bend.params_averaged["Length"][window_nb] = abs(cl_ptmax.s-cl_ptmin.s)
+            
+            bend.params_averaged["Length"] = abs(cl_ptmax.s-cl_ptmin.s)
             d = cpf.distance(cl_ptmin.pt, cl_ptmax.pt)
             if d > 0:
-                bend.params_averaged["Sinuosity"][window_nb] = bend.params_averaged["Length"][window_nb] / d
+                bend.params_averaged["Sinuosity"] = bend.params_averaged["Length"] / d
 
             nb = 0
             for j in np.arange(jmin, jmax+1):
                 nb += 1
                 for prop in props:
                     if j == jmin:
-                        bend.params_averaged[prop][window_nb] = 0
+                        bend.params_averaged[prop] = 0
                     if np.isfinite(self.bends[j].params[prop]):
-                        bend.params_averaged[prop][window_nb] += self.bends[j].params[prop]
+                        bend.params_averaged[prop] += self.bends[j].params[prop]
 
             for prop in props:
-                bend.params_averaged[prop][window_nb] /= nb
+                bend.params_averaged[prop] /= nb
 
                 if np.isfinite(bend.params[prop]):
                     mean_values[prop] += bend.params[prop]
@@ -619,7 +625,7 @@ class Centerline:
             bend.params["Amplitude_perp"] = self.compute_bend_amplitude(bend_index, cl_pt_apex.pt, kind="perpendicular")
             bend.params["Amplitude_middle"] = self.compute_bend_amplitude(bend_index, cl_pt_apex.pt, kind="middle")
 
-    def save_morphometry_results(self, workdir):
+    def save_morphometry_results(self, workdir, delimiter=';'):
 
         props = ["Sinuosity_W1",          "Sinuosity_W2",
                  "Wavelength_Leopold_W1", "Wavelength_Leopold_W2",
@@ -633,7 +639,7 @@ class Centerline:
         for i, bend in enumerate(self.bends):
             data["Bend_ID"][i] = bend.id
             for prop in props:
-                data[prop][i] = bend.params_averaged[prop[:-3]][int(prop[-1])-1]
+                data[prop][i] = bend.params_averaged[prop[:-3]]
 
-        data.to_csv(workdir+"morphometry.csv", sep=';', index=False, float_format='%.2f', mode='a')
+        data.to_csv(workdir+"morphometry.csv", sep=delimiter, index=False, float_format='%.2f', mode='a')
 

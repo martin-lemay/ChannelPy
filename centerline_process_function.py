@@ -8,6 +8,7 @@ Created on Thu Feb 21 19:40:31 2019
 
 import math
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import pylab as pl
 from scipy import interpolate
