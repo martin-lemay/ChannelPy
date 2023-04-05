@@ -75,19 +75,19 @@ def plot_centerline_collection(work_dir, cl_collec, domain, nb_cl = 999, show = 
     if plot_warping:
       try:
         for i, key2 in enumerate(cl_collec.all_iter[:-1]):
-
           key1 = cl_collec.all_iter[i+1]
 
           ctls1 = cl_collec.centerlines[key1]
           ctls2 = cl_collec.centerlines[key2]
 
-          if i==0:
-            continue
+          # if i==0:
+          #   continue
 
           warp_x, warp_y = [], []
           for index1, index2 in enumerate(ctls1.index_cl_pts_prev_centerline):
             if not np.isfinite(index1) or not np.isfinite(index2):
               continue
+
             pt1 = ctls1.cl_points[int(index1)].pt
             pt2 = ctls2.cl_points[int(index2)].pt
             warp_x += [[pt1[0], pt2[0]]]
@@ -106,8 +106,9 @@ def plot_centerline_collection(work_dir, cl_collec, domain, nb_cl = 999, show = 
     if len(domain[0])+len(domain[1]) == 0:
         plt.axis('equal')
 
-    plt.xticks(np.arange(domain[0][0], domain[0][1]+1, 500), rotation=45)
-    plt.yticks(np.arange(domain[1][0], domain[1][1]+1, 500))
+    if (len(domain[0]) > 0) & (len(domain[1]) > 0):
+      plt.xticks(np.arange(domain[0][0], domain[0][1]+1, 500), rotation=45)
+      plt.yticks(np.arange(domain[1][0], domain[1][1]+1, 500))
 
     plt.grid(True, which='both', axis='both')
 
@@ -232,7 +233,7 @@ def plot_bend_evol(ax, cl_collec, bend_evol, nb_cl = 999, domain = [[],[]], anno
 
 def plot_bends(ax, cl_points, bends, domain = [[],[]], annotate = False,
                plot_apex = True, plot_inflex = False, plot_middle = False,
-               plot_centroid = False, plot_centroid_trajec = False, plot_apex_trajec = True,
+               plot_centroid = False,
                plot_apex_proba = False, plot_normal = False, scale_normal = 1.,
                annot_text_size=10, color_bend = False, alpha=1,
                linewidth=1, markersize=2, cl_color=False, plot_vel_perturb=False):
