@@ -79,7 +79,7 @@ class Centerline_collection:
     def import_data(self, filepath, spacing, smooth_distance,
                     filter_raw, start, end, lag, nb, sinuo_thres, width,
                      apex_proba_ponds, compute_curvature, interpol_props,
-                     plot_curvature, compute_geometry):
+                     plot_curvature):
 
 
         dataset = pd.read_csv(filepath, sep=';')
@@ -108,8 +108,7 @@ class Centerline_collection:
                                                           apex_proba_ponds,
                                                           compute_curvature,
                                                           interpol_props,
-                                                          plot_curvature,
-                                                          compute_geometry)
+                                                          plot_curvature)
 
         self.all_iter = np.sort(np.array(list(self.centerlines.keys())))
 
