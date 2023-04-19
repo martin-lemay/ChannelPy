@@ -52,7 +52,7 @@ class Centerline_collection:
                  lag=1, nb=1, sinuo_thres=1, width=1,
                  apex_proba_ponds=(1.,1.,1.),
                  compute_curvature=False, interpol_props=True,
-                 plot_curvature=False, compute_geometry=False):
+                 plot_curvature=False):
 
         self.centerlines = {} # dictionnary key:Centerline
         self.all_iter = []
@@ -71,7 +71,7 @@ class Centerline_collection:
         self.import_data(filepath, spacing, smooth_distance,
                          filter_raw, start, end, lag, nb, sinuo_thres, width,
                          apex_proba_ponds, compute_curvature, interpol_props,
-                         plot_curvature, compute_geometry)
+                         plot_curvature)
 
         print("Data imported")
 
