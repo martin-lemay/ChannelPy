@@ -1,6 +1,8 @@
 # ChannelPy
 This repository sets the data structure to store channel centreline properties and centreline evolution through time. It provides methods to create cross-sections and measure channel geomorphic and kinematics parameters.
 
+**ChannelPy project was archived. It is replace by [pyBenD] (https://github.com/martin-lemay/pyBenD) project since March 2025.**
+
 ## 
 The methodologies for channel morphometric measurements, and channel point tracking algorithm are inspired from [zsylvester/meanderpy] (https://github.com/zsylvester/meanderpy)
 
